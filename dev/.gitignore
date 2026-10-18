@@ -1,0 +1,5 @@
+# Bibliothèque Free clonée par desktop/run.sh, sans licence publiée
+desktop/libfbxqml/
+
+# Réglages persistés par le harnais : données de session Jellyfin
+desktop/data/

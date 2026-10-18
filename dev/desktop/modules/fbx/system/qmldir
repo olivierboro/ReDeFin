@@ -1,0 +1,2 @@
+module fbx.system
+singleton Device 1.0 Device.qml
