@@ -645,12 +645,13 @@ FocusScope {
     function _handleSettingsFocusKey(event){ var w=_settingsOverlay(); return !!(w&&w.handlePlayerFocusKey&&w.handlePlayerFocusKey(event,w.focusedControl,controlsFocus===cF_CONTROLS,getControlsButtonIndex())) }
     function _handleSideFocusKey(event){
         if (!event || _chaptersPanelOpen() || _qualityPanelOpen() || _trackPanelOpen()) return false
-        // Sous les boutons latéraux, il n'y a aucune commande : Bas ne change pas le focus.
+        // Sous les boutons latéraux, il n'y a aucune commande : Bas referme les contrôles.
         // Les menus ouverts restent gérés par leurs propres handlers pour préserver la navigation interne.
         if (event.key === Qt.Key_Down && !audioMenuVisible && !subMenuVisible &&
             (controlsFocus === cF_ZOOM || controlsFocus === cF_SPEED ||
              controlsFocus === cF_CHAPTERS || controlsFocus === cF_QUALITY ||
              controlsFocus === cF_MENU)) {
+            hideControlsFromBottomRow()
             event.accepted = true
             return true
         }
@@ -2738,6 +2739,14 @@ FocusScope {
         } else if (controlsFocus===cF_CONTROLS) {
             _focusControlsLater()
         }
+    }
+    // Bas depuis la rangée du bas (lecture ou boutons latéraux) : même fermeture
+    // que le masquage automatique, focus reparqué sur la barre de progression.
+    function hideControlsFromBottomRow(){
+        if(nextUiLocked){  return }
+        controlsTimer.stop()
+        _parkFocusOnProgress("down-from-bottom-row")
+        controlsVisible=false
     }
     function resetControlsTimer(){
         if(nextUiLocked){  return }

@@ -382,6 +382,7 @@ function handlePressed(root, event) {
                 return;
             }
             if (event.key === K.Key_Down) {
+                if (root && typeof root.hideControlsFromBottomRow === "function") root.hideControlsFromBottomRow();
                 event.accepted = true;
                 return;
             }
