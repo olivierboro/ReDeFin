@@ -7,6 +7,14 @@
 #   --grab=…       capture la fenêtre après 6 s (--grab-delay=<ms>) puis quitte
 #   --keys=…       rejoue des touches avant la capture (détail dans modules/fbx/application/application.qml)
 #   --trace-focus  journalise chaque changement d'élément actif
+#   --trace-frames signale chaque à-coup de plus de 50 ms entre deux trames
+#   --real-video   garde le vrai lecteur de Qt au lieu du faux de fake-video/
+#                  (macOS ne lit pas les MKV, AC3, DTS… annoncés pour la Freebox)
+#   --mac-video    vrai lecteur de Qt et modèle fbx6hd-desktop : avec le correctif
+#                  patches/desktop-playback-profile.patch (appliqué par
+#                  dev/preview.sh), Jellyfin transcode pour le Mac (HLS H.264/AAC)
+#   --fake-duration-min=<n>  durée simulée par le faux lecteur (120 min par défaut)
+#   --open-item=<id>[:serie] choisit le profil enregistré et ouvre directement cette fiche
 #   Sans chemin, lance le dépôt qui contient ce script.
 #
 # Télécommande : flèches, Entrée = OK, Échap = Retour, PageUp / PageDown.
@@ -18,11 +26,14 @@ qmlscene="/opt/homebrew/opt/qt@5/bin/qmlscene"
 model="fbx6hd"
 repo="$(cd "$here/../.." && pwd)"
 extra=()
+imports=(-I "$here/modules" -I "$here/fake-video")
 
 for arg in "$@"; do
   case "$arg" in
     --delta) model="fbx7hd-delta" ;;
-    --grab=*|--grab-delay=*|--keys=*|--trace-focus) extra+=("$arg") ;;
+    --real-video) imports=(-I "$here/modules") ;;
+    --mac-video) model="fbx6hd-desktop"; imports=(-I "$here/modules") ;;
+    --grab=*|--grab-delay=*|--keys=*|--trace-focus|--trace-frames|--fake-duration-min=*|--open-item=*) extra+=("$arg") ;;
     *) repo="$arg" ;;
   esac
 done
@@ -42,4 +53,4 @@ lan_hosts="$(
   } | grep -vE '^(22[4-9]|23[0-9])\.|\.255$' | sort -u -t. -k1,1n -k2,2n -k3,3n -k4,4n | paste -sd, -
 )"
 
-exec "$qmlscene" -I "$here/modules" "$repo/main.qml" -- "--fbx-model=$model" "--lan-hosts=$lan_hosts" ${extra[@]+"${extra[@]}"}
+exec "$qmlscene" "${imports[@]}" "$repo/main.qml" -- "--fbx-model=$model" "--lan-hosts=$lan_hosts" ${extra[@]+"${extra[@]}"}

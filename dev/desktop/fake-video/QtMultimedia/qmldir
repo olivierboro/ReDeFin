@@ -1,0 +1,5 @@
+module QtMultimedia
+MediaPlayer 5.0 MediaPlayer.qml
+MediaPlayer 5.15 MediaPlayer.qml
+VideoOutput 5.0 VideoOutput.qml
+VideoOutput 5.15 VideoOutput.qml

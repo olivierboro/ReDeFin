@@ -1,0 +1,109 @@
+--- a/qml/js/JellyfinPlaybackRevolution.js	2026-10-20 22:46:31
++++ b/qml/js/JellyfinPlaybackRevolution.js	2026-10-20 22:46:31
+@@ -19,6 +19,13 @@
+ var REVOLUTION_TRANSCODE_CONTAINER_HTTP = "mkv";
+ var REVOLUTION_TRANSCODE_CONTAINER_HLS = "ts";
+ 
++// Harnais du poste de travail (dev/desktop, --fbx-model=fbx6hd-desktop) : le
++// lecteur de macOS (AVFoundation) ne lit que MP4/MOV en direct et HLS/TS en
++// H.264 + AAC. Jellyfin transcode tout le reste. Jamais actif sur une Freebox.
++var DESKTOP_HARNESS = (function() {
++    try { return Qt.application.arguments.indexOf("--fbx-model=fbx6hd-desktop") >= 0; } catch (e) { return false; }
++})();
++
+ /* ================== Helpers ================== */
+ function _num(v) {
+     v = Number(v);
+@@ -63,12 +70,14 @@
+ // Digital, Dolby Digital Plus, DTS core, FLAC, MP1, MP2, MP3 et Vorbis.
+ function _revAudioCopySafe(codec) {
+     var c = _revCanonicalAudioCodec(codec);
++    if (DESKTOP_HARNESS) return c === "aac" || c === "mp3";
+     return c === "aac" || c === "ac3" || c === "eac3" || c === "dts" ||
+            c === "flac" || c === "mp1" || c === "mp2" || c === "mp3" || c === "vorbis";
+ }
+ 
+ function _revTsAudioCopySafe(codec) {
+     var c = _revCanonicalAudioCodec(codec);
++    if (DESKTOP_HARNESS) return c === "aac";
+     return c === "aac" || c === "ac3" || c === "eac3" || c === "dts" ||
+            c === "mp1" || c === "mp2" || c === "mp3";
+ }
+@@ -93,6 +102,7 @@
+ // MS-MPEG4 v3/DivX 3 et VC-1/WMV9.
+ function _revVideoCopySafe(codec) {
+     var c = _codec(codec);
++    if (DESKTOP_HARNESS) return c === "h264";
+     return c === "h264" || c === "mpeg1video" || c === "mpeg2video" ||
+            c === "mpeg4" || c === "msmpeg4v3" || c === "vc1" || c === "wmv3";
+ }
+@@ -203,6 +213,34 @@
+ 
+ /* ================== DeviceProfile Revolution ================== */
+ function _revProfile(mode) {
++    if (DESKTOP_HARNESS) {
++        return {
++            Name: "ReDeFin-Desktop-Harness",
++            MaxStreamingBitrate: 120000000,
++            MaxStaticBitrate: 120000000,
++            MaxAudioChannels: 2,
++            DirectPlayProfiles: [
++                { Container: "mp4,m4v,mov", Type: "Video", VideoCodec: "h264,hevc", AudioCodec: "aac,mp3" },
++                { Container: "aac,m4a,mp4", Type: "Audio", AudioCodec: "aac" },
++                { Container: "mp3", Type: "Audio", AudioCodec: "mp3" }
++            ],
++            DirectStreamProfiles: [],
++            TranscodingProfiles: [
++                { Container: "ts", Type: "Video", Protocol: "hls", VideoCodec: "h264", AudioCodec: "aac", MaxAudioChannels: "2" }
++            ],
++            CodecProfiles: [],
++            SubtitleProfiles: [
++                { Format: "srt", Method: "External" },
++                { Format: "subrip", Method: "External" },
++                { Format: "vtt", Method: "External" },
++                { Format: "webvtt", Method: "External" },
++                { Format: "ass", Method: "Encode" },
++                { Format: "ssa", Method: "Encode" },
++                { Format: "pgssub", Method: "Encode" },
++                { Format: "pgs", Method: "Encode" }
++            ]
++        };
++    }
+     var dp = {
+         Name: "Freebox-Revolution",
+         MaxStreamingBitrate: 200000000,
+@@ -329,6 +367,7 @@
+         (ctx.forceDPOnAudioSwitch === true);
+ 
+     if (!needServerSelect) return null;
++    if (DESKTOP_HARNESS) return "ts";
+ 
+     var v = StreamRules.firstStream(src, "Video");
+     var ext = _containerOf(src);
+@@ -353,6 +392,7 @@
+ }
+ 
+ function _revPreferredTranscodeProtocol(ctx, src) {
++    if (DESKTOP_HARNESS) return "hls";
+     var v = StreamRules.firstStream(src, "Video");
+     var vc = _codec(v && v.Codec);
+ 
+@@ -370,6 +410,7 @@
+ }
+ 
+ function _revPreferredTranscodeAudioCodec(ctx, src, audioIndex, useHls) {
++    if (DESKTOP_HARNESS) return "aac";
+     var sourceCodec = _selectedAudioCodecSafe(src, audioIndex);
+     var a = StreamRules.audioStreamByIndex(src, audioIndex);
+     if (!a) a = StreamRules.firstStream(src, "Audio");
+@@ -431,6 +472,10 @@
+ 
+ function _revForceTranscode(ctx, src) {
+     if (!src) {  return false; }
++    if (DESKTOP_HARNESS) {
++        var desktopContainer = _containerOf(src);
++        if (desktopContainer !== "mp4" && desktopContainer !== "m4v" && desktopContainer !== "mov") return true;
++    }
+ 
+     var v = StreamRules.firstStream(src, "Video");
+     var selectedPgs = _selectedPgsSubtitle(ctx, src);
